@@ -3,18 +3,18 @@ import { Lock, Unlock, Plus, Trash2, Play, CheckCircle2, Undo2, Pause, ChevronDo
 
 const STORAGE_KEY = "liga-datos";
 const VISITAS_KEY = "liga-visitas";
-const CODIGO_EDICION = "CAMPO10"; // cÃ³digo que deben usar los colaboradores para editar
+const CODIGO_EDICION = "CAMPO10"; // código que deben usar los colaboradores para editar
 
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-// Equipos oficiales â€” DivisiÃ³n de Honor Juvenil, Grupo 2, temporada 2026-2027 (RFEF)
+// Equipos oficiales — División de Honor Juvenil, Grupo 2, temporada 2026-2027 (RFEF)
 const EQUIPOS_DHJ = [
-  { id: "eq1", nombre: "Deportivo AlavÃ©s" },
+  { id: "eq1", nombre: "Deportivo Alavés" },
   { id: "eq2", nombre: "Antiguoko KE" },
   { id: "eq3", nombre: "CD Arratia" },
   { id: "eq4", nombre: "Athletic Club" },
   { id: "eq5", nombre: "Cultural Leonesa" },
-  { id: "eq6", nombre: "CD BetoÃ±o" },
+  { id: "eq6", nombre: "CD Betoño" },
   { id: "eq7", nombre: "Danok Bat" },
   { id: "eq8", nombre: "EF Mareo" },
   { id: "eq9", nombre: "SD Indautxu" },
@@ -23,12 +23,12 @@ const EQUIPOS_DHJ = [
   { id: "eq12", nombre: "Santutxu FC" },
   { id: "eq13", nombre: "SD Eibar" },
   { id: "eq14", nombre: "SD Leioa" },
-  { id: "eq15", nombre: "UD LogroÃ±Ã©s" },
+  { id: "eq15", nombre: "UD Logroñés" },
   { id: "eq16", nombre: "Unionistas Salamanca" },
 ];
 
 // Calendario oficial completo (30 jornadas) publicado por la RFEF para el Grupo 2, temporada 2026-2027.
-// Cada pareja [local, visitante] usa el Ã­ndice del equipo en EQUIPOS_DHJ (1-16).
+// Cada pareja [local, visitante] usa el índice del equipo en EQUIPOS_DHJ (1-16).
 const CALENDARIO_DHJ_G2 = [
   { jornada: 1, fecha: "2026-09-06", enc: [[1,3],[14,5],[12,7],[10,9],[8,11],[6,13],[4,15],[16,2]] },
   { jornada: 2, fecha: "2026-09-13", enc: [[3,16],[5,1],[7,14],[9,12],[11,10],[13,8],[15,6],[2,4]] },
@@ -62,20 +62,20 @@ const CALENDARIO_DHJ_G2 = [
   { jornada: 30, fecha: "2027-05-02", enc: [[2,15],[4,13],[6,11],[8,9],[10,7],[12,5],[14,3],[16,1]] },
 ];
 
-// Resultados reales de la Jornada 1 (05-06/09/2026), confirmados por el usuario vÃ­a Sofascore.
-// Clave "local-visitante" con los Ã­ndices de EQUIPOS_DHJ.
+// Resultados reales de la Jornada 1 (05-06/09/2026), confirmados por el usuario vía Sofascore.
+// Clave "local-visitante" con los índices de EQUIPOS_DHJ.
 const RESULTADOS_J1 = {
-  "1-3": [5, 0],   // Deportivo AlavÃ©s 5-0 CD Arratia
+  "1-3": [5, 0],   // Deportivo Alavés 5-0 CD Arratia
   "14-5": [4, 2],  // SD Leioa 4-2 Cultural Leonesa
   "12-7": [1, 1],  // Santutxu FC 1-1 Danok Bat
   "10-9": [5, 1],  // Real Sociedad 5-1 SD Indautxu
   "8-11": [2, 11], // EF Mareo 2-11 Real Valladolid
-  "6-13": [1, 2],  // CD BetoÃ±o 1-2 SD Eibar
-  "4-15": [6, 0],  // Athletic Club 6-0 UD LogroÃ±Ã©s
+  "6-13": [1, 2],  // CD Betoño 1-2 SD Eibar
+  "4-15": [6, 0],  // Athletic Club 6-0 UD Logroñés
   "16-2": [2, 2],  // Unionistas Salamanca 2-2 Antiguoko KE
 };
 
-// Goleadores (y una tarjeta roja) reales de la Jornada 1, confirmados por el usuario vÃ­a Sofascore.
+// Goleadores (y una tarjeta roja) reales de la Jornada 1, confirmados por el usuario vía Sofascore.
 // "equipo" es relativo al partido: 'local' o 'visitante'.
 const EVENTOS_J1 = {
   "1-3": [
@@ -142,28 +142,28 @@ const EVENTOS_J1 = {
   ],
 };
 
-// Fechas y horas reales de la Jornada 2, confirmadas por el usuario vÃ­a Sofascore
-// (sustituyen a la fecha genÃ©rica de jornada del calendario oficial en PDF).
+// Fechas y horas reales de la Jornada 2, confirmadas por el usuario vía Sofascore
+// (sustituyen a la fecha genérica de jornada del calendario oficial en PDF).
 const HORARIOS_J2 = {
   "3-16": { fecha: "2026-09-12", hora: "17:45" },  // CD Arratia - Unionistas Salamanca
-  "5-1": { fecha: "2026-09-12", hora: "17:00" },   // Cultural Leonesa - Deportivo AlavÃ©s
+  "5-1": { fecha: "2026-09-12", hora: "17:00" },   // Cultural Leonesa - Deportivo Alavés
   "7-14": { fecha: "2026-09-12", hora: "12:30" },  // Danok Bat - SD Leioa
   "9-12": { fecha: "2026-09-12", hora: "18:00" },  // SD Indautxu - Santutxu FC
   "11-10": { fecha: "2026-09-13", hora: "12:00" }, // Real Valladolid - Real Sociedad
   "13-8": { fecha: "2026-09-12", hora: "12:30" },  // SD Eibar - EF Mareo
-  "15-6": { fecha: "2026-09-13", hora: "17:00" },  // UD LogroÃ±Ã©s - CD BetoÃ±o
+  "15-6": { fecha: "2026-09-13", hora: "17:00" },  // UD Logroñés - CD Betoño
   "2-4": { fecha: "2026-09-12", hora: "17:30" },   // Antiguoko KE - Athletic Club
 };
 
-// Fechas y horas reales de la Jornada 3, confirmadas por el usuario vÃ­a Sofascore.
+// Fechas y horas reales de la Jornada 3, confirmadas por el usuario vía Sofascore.
 const HORARIOS_J3 = {
-  "1-7": { fecha: "2026-09-19", hora: "12:30" },   // Deportivo AlavÃ©s - Danok Bat
+  "1-7": { fecha: "2026-09-19", hora: "12:30" },   // Deportivo Alavés - Danok Bat
   "14-9": { fecha: "2026-09-19", hora: "13:15" },  // SD Leioa - SD Indautxu
   "12-11": { fecha: "2026-09-19", hora: "16:00" }, // Santutxu FC - Real Valladolid
   "3-5": { fecha: "2026-09-19", hora: "18:15" },   // CD Arratia - Cultural Leonesa
   "10-13": { fecha: "2026-09-20", hora: "11:30" }, // Real Sociedad - SD Eibar
-  "6-2": { fecha: "2026-09-20", hora: "12:00" },   // CD BetoÃ±o - Antiguoko KE
-  "8-15": { fecha: "2026-09-20", hora: "16:00" },  // EF Mareo - UD LogroÃ±Ã©s
+  "6-2": { fecha: "2026-09-20", hora: "12:00" },   // CD Betoño - Antiguoko KE
+  "8-15": { fecha: "2026-09-20", hora: "16:00" },  // EF Mareo - UD Logroñés
   "16-4": { fecha: "2026-09-20", hora: "17:00" },  // Unionistas Salamanca - Athletic Club
 };
 
@@ -201,7 +201,7 @@ function datosDemo() {
     });
   });
   return {
-    liga: { nombre: "DivisiÃ³n de Honor Juvenil Â· Grupo 2", temporada: "2026-2027" },
+    liga: { nombre: "División de Honor Juvenil · Grupo 2", temporada: "2026-2027" },
     equipos: EQUIPOS_DHJ,
     partidos,
     solicitudes: [],
@@ -219,7 +219,7 @@ function iniciales(nombre) {
   return (partes[0][0] + partes[1][0]).toUpperCase();
 }
 
-// Minutos jugados a partir del cronÃ³metro del partido (funciona aunque la pestaÃ±a estÃ© cerrada,
+// Minutos jugados a partir del cronómetro del partido (funciona aunque la pestaña esté cerrada,
 // porque se calcula a partir de una marca de tiempo real, no de un contador acumulado en memoria)
 function segundosDe(p) {
   const c = p.cronometro;
@@ -238,9 +238,9 @@ function formatoReloj(totalSegundos) {
 }
 function formatearFecha(p) {
   if (!p.fecha) return "Fecha por confirmar";
-  return p.hora ? `${p.fecha} Â· ${p.hora}h` : p.fecha;
+  return p.hora ? `${p.fecha} · ${p.hora}h` : p.fecha;
 }
-// Fecha/hora real de inicio del partido, o null si no se conoce con precisiÃ³n.
+// Fecha/hora real de inicio del partido, o null si no se conoce con precisión.
 function horaProgramadaDe(p) {
   if (!p.fecha) return null;
   const horaStr = p.hora || "00:00";
@@ -511,9 +511,9 @@ const ESTILOS = `
 export default function App() {
   const [datos, setDatos] = useState(null);
   const [cargando, setCargando] = useState(true);
-  const [pestaÃ±a, setPestaÃ±a] = useState("vivo");
+  const [pestaña, setPestaña] = useState("vivo");
   const [desbloqueado, setDesbloqueado] = useState(false);
-  const [partidoPermitido, setPartidoPermitido] = useState(null); // id del Ãºnico partido que un ayudante puede editar
+  const [partidoPermitido, setPartidoPermitido] = useState(null); // id del único partido que un ayudante puede editar
   const [mostrarGate, setMostrarGate] = useState(false);
   const [pasoGate, setPasoGate] = useState("pregunta"); // 'pregunta' | 'elegirPartido' | 'solicitar' | 'codigo' | 'confirmado'
   const [partidoSeleccionado, setPartidoSeleccionado] = useState(null);
@@ -565,7 +565,7 @@ export default function App() {
 
   useEffect(() => {
     cargar(false);
-    registrarVisita(); // cuenta una vez por carga de la pÃ¡gina
+    registrarVisita(); // cuenta una vez por carga de la página
     const iv = setInterval(() => cargar(true), 15000);
     const ivVisitas = setInterval(leerVisitas, 15000); // solo lectura, no vuelve a contar
     return () => { clearInterval(iv); clearInterval(ivVisitas); };
@@ -584,7 +584,7 @@ export default function App() {
     return (
       <div className="liga-app" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
         <style>{ESTILOS}</style>
-        <p style={{ color: "var(--ink-soft)", fontSize: 14 }}>Cargando la ligaâ€¦</p>
+        <p style={{ color: "var(--ink-soft)", fontSize: 14 }}>Cargando la liga…</p>
       </div>
     );
   }
@@ -596,7 +596,7 @@ export default function App() {
   const buscarPartido = (nuevo, id) => nuevo.partidos.find((x) => x.id === id);
 
   // ---- Mutaciones ----
-  const aÃ±adirEquipo = (nombre) => {
+  const añadirEquipo = (nombre) => {
     if (!nombre.trim()) return;
     const nuevo = clonar(datos);
     nuevo.equipos.push({ id: uid(), nombre: nombre.trim() });
@@ -607,7 +607,7 @@ export default function App() {
     nuevo.equipos = nuevo.equipos.filter((e) => e.id !== id);
     guardar(nuevo);
   };
-  const aÃ±adirPartido = (form) => {
+  const añadirPartido = (form) => {
     if (!form.localId || !form.visitanteId || form.localId === form.visitanteId) return;
     const nuevo = clonar(datos);
     nuevo.partidos.push({
@@ -631,7 +631,7 @@ export default function App() {
     guardar(nuevo);
   };
 
-  // Un solo botÃ³n "marcha/paro" que recorre: iniciar partido -> descanso -> iniciar 2Âª parte (desde el min. 45) -> descanso/reanudar normal
+  // Un solo botón "marcha/paro" que recorre: iniciar partido -> descanso -> iniciar 2ª parte (desde el min. 45) -> descanso/reanudar normal
   const alternarCronometro = (id) => {
     const nuevo = clonar(datos);
     const p = buscarPartido(nuevo, id);
@@ -671,7 +671,7 @@ export default function App() {
     guardar(nuevo);
   };
 
-  const aÃ±adirEventoInterno = (nuevo, partidoId, ev) => {
+  const añadirEventoInterno = (nuevo, partidoId, ev) => {
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
     p.eventos = p.eventos || [];
@@ -685,21 +685,21 @@ export default function App() {
     const nuevo = clonar(datos);
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
-    aÃ±adirEventoInterno(nuevo, partidoId, { tipo: "gol", equipoId, minuto: minutosDe(p) });
+    añadirEventoInterno(nuevo, partidoId, { tipo: "gol", equipoId, minuto: minutosDe(p) });
     guardar(nuevo);
   };
   const registrarTarjeta = (partidoId, equipoId, color) => {
     const nuevo = clonar(datos);
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
-    aÃ±adirEventoInterno(nuevo, partidoId, { tipo: color, equipoId, minuto: minutosDe(p) });
+    añadirEventoInterno(nuevo, partidoId, { tipo: color, equipoId, minuto: minutosDe(p) });
     guardar(nuevo);
   };
   const registrarCambio = (partidoId, equipoId) => {
     const nuevo = clonar(datos);
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
-    aÃ±adirEventoInterno(nuevo, partidoId, { tipo: "cambio", equipoId, minuto: minutosDe(p) });
+    añadirEventoInterno(nuevo, partidoId, { tipo: "cambio", equipoId, minuto: minutosDe(p) });
     guardar(nuevo);
   };
   const deshacerEvento = (partidoId) => {
@@ -719,7 +719,7 @@ export default function App() {
     if (valor === CODIGO_EDICION) {
       setDesbloqueado(true);
       setPartidoPermitido(null);
-      setPestaÃ±a("vivo");
+      setPestaña("vivo");
       cerrarGate();
       return;
     }
@@ -727,11 +727,11 @@ export default function App() {
     if (solicitudCoincide) {
       setPartidoPermitido(solicitudCoincide.partidoId);
       setDesbloqueado(false);
-      setPestaÃ±a("vivo");
+      setPestaña("vivo");
       cerrarGate();
       return;
     }
-    setErrorGate("CÃ³digo incorrecto. Pregunta al organizador de la liga.");
+    setErrorGate("Código incorrecto. Pregunta al organizador de la liga.");
   };
 
   const cerrarGate = () => {
@@ -758,11 +758,11 @@ export default function App() {
   const enviarSolicitud = () => {
     const correo = emailInput.trim();
     if (!correo || !correo.includes("@")) {
-      setErrorGate("Escribe un email vÃ¡lido.");
+      setErrorGate("Escribe un email válido.");
       return;
     }
     if (!partidoSeleccionado || partidoCubierto(partidoSeleccionado)) {
-      setErrorGate("Ese partido ya no estÃ¡ disponible, vuelve atrÃ¡s y elige otro.");
+      setErrorGate("Ese partido ya no está disponible, vuelve atrás y elige otro.");
       return;
     }
     const clave = Math.random().toString(36).slice(2, 7).toUpperCase();
@@ -773,7 +773,7 @@ export default function App() {
     // Autoservicio: se concede acceso al instante, pero SOLO para el partido elegido
     setPartidoPermitido(partidoSeleccionado);
     setDesbloqueado(false);
-    setPestaÃ±a("vivo");
+    setPestaña("vivo");
     setClaveGenerada(clave);
     setPasoGate("confirmado");
     setErrorGate("");
@@ -791,7 +791,7 @@ export default function App() {
   const clasificacion = calcularClasificacion(equipos, partidos);
   const goleadores = calcularGoleadores(equipos, partidos);
 
-  // Solo se puede solicitar ayuda para partidos de la jornada mÃ¡s prÃ³xima sin jugar
+  // Solo se puede solicitar ayuda para partidos de la jornada más próxima sin jugar
   const jornadaParaSolicitudes = proximos.length ? Math.min(...proximos.map((p) => p.jornada)) : null;
   const partidosParaSolicitudes = proximos.filter((p) => p.jornada === jornadaParaSolicitudes);
   const partidoCubierto = (partidoId) => solicitudes.some((s) => s.partidoId === partidoId);
@@ -807,13 +807,13 @@ export default function App() {
       <div className="liga-masthead">
         <div>
           <p className="liga-titulo">{liga.nombre}</p>
-          <p className="liga-subtitulo">Temporada {liga.temporada} Â· resultados en directo desde la grada</p>
+          <p className="liga-subtitulo">Temporada {liga.temporada} · resultados en directo desde la grada</p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {desbloqueado && (
             <>
               <span className="liga-visitas" title="Visitas totales a la web">
-                ðŸ‘ {visitas === null ? "â€¦" : visitas}
+                👁 {visitas === null ? "…" : visitas}
               </span>
               <button className="liga-candado-btn" onClick={() => setMostrarSolicitudes(true)}>
                 Ayudantes{solicitudes.length > 0 ? ` (${solicitudes.length})` : ""}
@@ -829,7 +829,7 @@ export default function App() {
             }}
           >
             {modoRestringido ? <Unlock size={15} /> : <Lock size={15} />}
-            {desbloqueado ? "Modo ediciÃ³n" : partidoPermitido ? "Ayudando en 1 partido" : "Ayudante"}
+            {desbloqueado ? "Modo edición" : partidoPermitido ? "Ayudando en 1 partido" : "Ayudante"}
           </button>
         </div>
       </div>
@@ -840,19 +840,19 @@ export default function App() {
           : [
               ["vivo", "En vivo"],
               ["calendario", "Calendario"],
-              ["clasificacion", "ClasificaciÃ³n"],
+              ["clasificacion", "Clasificación"],
               ["goleadores", "Goleadores"],
               ["equipos", "Equipos"],
             ]
         ).map(([key, label]) => (
-          <button key={key} className={`liga-tab ${pestaÃ±a === key ? "activa" : ""}`} onClick={() => setPestaÃ±a(key)}>
+          <button key={key} className={`liga-tab ${pestaña === key ? "activa" : ""}`} onClick={() => setPestaña(key)}>
             {label}
           </button>
         ))}
       </div>
 
       <div className="liga-contenido">
-        {(modoRestringido ? "vivo" : pestaÃ±a) === "vivo" && (
+        {(modoRestringido ? "vivo" : pestaña) === "vivo" && (
           <VistaVivo
             enVivo={enVivo}
             proximos={proximos}
@@ -868,20 +868,20 @@ export default function App() {
             deshacerEvento={deshacerEvento}
           />
         )}
-        {!modoRestringido && pestaÃ±a === "calendario" && (
+        {!modoRestringido && pestaña === "calendario" && (
           <VistaCalendario
             partidos={partidos}
             equipos={equipos}
             nombreEquipo={nombreEquipo}
             desbloqueado={desbloqueado}
-            aÃ±adirPartido={aÃ±adirPartido}
+            añadirPartido={añadirPartido}
             eliminarPartido={eliminarPartido}
           />
         )}
-        {!modoRestringido && pestaÃ±a === "clasificacion" && <VistaClasificacion tabla={clasificacion} />}
-        {!modoRestringido && pestaÃ±a === "goleadores" && <VistaGoleadores tabla={goleadores} />}
-        {!modoRestringido && pestaÃ±a === "equipos" && (
-          <VistaEquipos equipos={equipos} desbloqueado={desbloqueado} aÃ±adirEquipo={aÃ±adirEquipo} eliminarEquipo={eliminarEquipo} />
+        {!modoRestringido && pestaña === "clasificacion" && <VistaClasificacion tabla={clasificacion} />}
+        {!modoRestringido && pestaña === "goleadores" && <VistaGoleadores tabla={goleadores} />}
+        {!modoRestringido && pestaña === "equipos" && (
+          <VistaEquipos equipos={equipos} desbloqueado={desbloqueado} añadirEquipo={añadirEquipo} eliminarEquipo={eliminarEquipo} />
         )}
       </div>
 
@@ -890,25 +890,25 @@ export default function App() {
           <div className="liga-gate-card" onClick={(e) => e.stopPropagation()}>
             {pasoGate === "pregunta" && (
               <>
-                <p style={{ fontWeight: 700, marginBottom: 10 }}>Â¿Quieres colaborar registrando los partidos en directo?</p>
+                <p style={{ fontWeight: 700, marginBottom: 10 }}>¿Quieres colaborar registrando los partidos en directo?</p>
                 <p style={{ fontSize: 12.5, color: "var(--ink-soft)", marginBottom: 14 }}>
-                  Eliges un partido de la jornada actual que todavÃ­a no tenga ayudante, dejas tu
+                  Eliges un partido de la jornada actual que todavía no tenga ayudante, dejas tu
                   email y al instante te damos una clave que solo sirve para ese partido. Con ella
-                  podrÃ¡s marcar goles, tarjetas y cambios mientras ves el encuentro desde la grada.
+                  podrás marcar goles, tarjetas y cambios mientras ves el encuentro desde la grada.
                 </p>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <button className="liga-btn" onClick={() => setPasoGate("elegirPartido")}>SÃ­, quiero colaborar</button>
+                  <button className="liga-btn" onClick={() => setPasoGate("elegirPartido")}>Sí, quiero colaborar</button>
                   <button className="liga-btn secundario" onClick={cerrarGate}>No, solo quiero ver</button>
                 </div>
                 <p style={{ fontSize: 12, color: "var(--ink-soft)", marginTop: 14 }}>
-                  Â¿Ya tienes una clave? <button className="liga-link" onClick={() => setPasoGate("codigo")}>IntrodÃºcela aquÃ­</button>
+                  ¿Ya tienes una clave? <button className="liga-link" onClick={() => setPasoGate("codigo")}>Introdúcela aquí</button>
                 </p>
               </>
             )}
 
             {pasoGate === "elegirPartido" && (
               <>
-                <p style={{ fontWeight: 700, marginBottom: 4 }}>Â¿Con quÃ© partido quieres ayudar?</p>
+                <p style={{ fontWeight: 700, marginBottom: 4 }}>¿Con qué partido quieres ayudar?</p>
                 <p style={{ fontSize: 12.5, color: "var(--ink-soft)", marginBottom: 10 }}>
                   {partidosParaSolicitudes.length > 0 ? `Jornada ${jornadaParaSolicitudes}` : "No hay partidos disponibles ahora mismo."}
                 </p>
@@ -928,7 +928,7 @@ export default function App() {
                   })}
                 </div>
                 {avisoCubierto && <p className="liga-error">{avisoCubierto}</p>}
-                <button className="liga-btn secundario" style={{ marginTop: 12 }} onClick={() => { setPasoGate("pregunta"); setAvisoCubierto(""); }}>â€¹ Volver</button>
+                <button className="liga-btn secundario" style={{ marginTop: 12 }} onClick={() => { setPasoGate("pregunta"); setAvisoCubierto(""); }}>‹ Volver</button>
               </>
             )}
 
@@ -939,7 +939,7 @@ export default function App() {
                   {partidoSeleccionado && (
                     <>Vas a ayudar con <strong>{nombreEquipo(partidos.find((x) => x.id === partidoSeleccionado)?.localId)} vs {nombreEquipo(partidos.find((x) => x.id === partidoSeleccionado)?.visitanteId)}</strong>. </>
                   )}
-                  DÃ©janos tu email para que quede registrado quiÃ©n ayuda con cada partido, y te damos la clave al instante.
+                  Déjanos tu email para que quede registrado quién ayuda con cada partido, y te damos la clave al instante.
                 </p>
                 <input
                   className="liga-input"
@@ -953,18 +953,18 @@ export default function App() {
                 {errorGate && <p className="liga-error">{errorGate}</p>}
                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                   <button className="liga-btn" onClick={enviarSolicitud}>Enviar solicitud</button>
-                  <button className="liga-btn secundario" onClick={() => setPasoGate("elegirPartido")}>â€¹ Volver</button>
+                  <button className="liga-btn secundario" onClick={() => setPasoGate("elegirPartido")}>‹ Volver</button>
                 </div>
               </>
             )}
 
             {pasoGate === "codigo" && (
               <>
-                <p style={{ fontWeight: 700, marginBottom: 10 }}>CÃ³digo de colaborador</p>
+                <p style={{ fontWeight: 700, marginBottom: 10 }}>Código de colaborador</p>
                 <input
                   className="liga-input"
                   type="password"
-                  placeholder="CÃ³digo"
+                  placeholder="Código"
                   value={codigoInput}
                   onChange={(e) => setCodigoInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && intentarDesbloquear()}
@@ -973,23 +973,23 @@ export default function App() {
                 {errorGate && <p className="liga-error">{errorGate}</p>}
                 <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
                   <button className="liga-btn" onClick={intentarDesbloquear}>Desbloquear</button>
-                  <button className="liga-btn secundario" onClick={() => setPasoGate("pregunta")}>â€¹ Volver</button>
+                  <button className="liga-btn secundario" onClick={() => setPasoGate("pregunta")}>‹ Volver</button>
                 </div>
               </>
             )}
 
             {pasoGate === "confirmado" && (
               <>
-                <p style={{ fontWeight: 700, marginBottom: 8 }}>Â¡Ya puedes colaborar!</p>
+                <p style={{ fontWeight: 700, marginBottom: 8 }}>¡Ya puedes colaborar!</p>
                 <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 12 }}>
                   {partidoSeleccionado && (() => {
                     const pp = partidos.find((x) => x.id === partidoSeleccionado);
                     return pp ? <>Tu acceso es <strong>solo para este partido</strong>: <strong>{nombreEquipo(pp.localId)} vs {nombreEquipo(pp.visitanteId)}</strong>.</> : null;
                   })()}
                 </p>
-                <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 4 }}>Guarda esta clave por si vuelves a entrar mÃ¡s tarde:</p>
+                <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 4 }}>Guarda esta clave por si vuelves a entrar más tarde:</p>
                 <p className="liga-clave-mostrada">{claveGenerada}</p>
-                <button className="liga-btn" onClick={cerrarGate}>Entendido, Â¡a jugar!</button>
+                <button className="liga-btn" onClick={cerrarGate}>Entendido, ¡a jugar!</button>
               </>
             )}
           </div>
@@ -1001,9 +1001,9 @@ export default function App() {
           <div className="liga-gate-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 360 }}>
             <p style={{ fontWeight: 700, marginBottom: 4 }}>Ayudantes registrados</p>
             <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 10 }}>
-              Se desbloquean solos al elegir partido; aquÃ­ solo queda constancia de quiÃ©n es cada uno.
+              Se desbloquean solos al elegir partido; aquí solo queda constancia de quién es cada uno.
             </p>
-            {solicitudes.length === 0 && <p className="liga-vacio">TodavÃ­a no se ha apuntado nadie.</p>}
+            {solicitudes.length === 0 && <p className="liga-vacio">Todavía no se ha apuntado nadie.</p>}
             {solicitudes.map((s) => {
               const pp = partidos.find((x) => x.id === s.partidoId);
               return (
@@ -1013,7 +1013,7 @@ export default function App() {
                     <br />
                     <span style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>
                       {pp ? `${nombreEquipo(pp.localId)} vs ${nombreEquipo(pp.visitanteId)}` : "Partido eliminado"}
-                      {s.clave ? ` Â· clave ${s.clave}` : ""}
+                      {s.clave ? ` · clave ${s.clave}` : ""}
                     </span>
                   </span>
                   <button
@@ -1061,7 +1061,7 @@ function VistaVivo({
         />
       ))}
 
-      <p className="liga-seccion-titulo">PrÃ³ximos partidos</p>
+      <p className="liga-seccion-titulo">Próximos partidos</p>
       {proximos.length === 0 && <p className="liga-vacio">No hay partidos programados.</p>}
       {proximos.length > 0 && (() => {
         const jornadaActual = Math.min(...proximos.map((p) => p.jornada));
@@ -1070,7 +1070,7 @@ function VistaVivo({
         return (
           <>
             <p style={{ fontSize: 12.5, color: "var(--ink-soft)", marginTop: -4, marginBottom: 10 }}>
-              Jornada {jornadaActual}{jornadasPendientes > 1 ? ` Â· quedan ${jornadasPendientes} jornadas por jugar (ver Calendario)` : ""}
+              Jornada {jornadaActual}{jornadasPendientes > 1 ? ` · quedan ${jornadasPendientes} jornadas por jugar (ver Calendario)` : ""}
             </p>
             {deEstaJornada.map((p) => {
               const editable = puedeEditar(p.id);
@@ -1109,11 +1109,11 @@ function VistaVivo({
         );
       })()}
 
-      <p className="liga-seccion-titulo">Ãšltimos resultados</p>
-      {finalizados.length === 0 && <p className="liga-vacio">TodavÃ­a no hay resultados.</p>}
+      <p className="liga-seccion-titulo">Últimos resultados</p>
+      {finalizados.length === 0 && <p className="liga-vacio">Todavía no hay resultados.</p>}
       {finalizados.slice(0, 6).map((p) => (
         <div key={p.id} className="liga-fila-compacta">
-          <div className="liga-vs">J{p.jornada} Â· {nombreEquipo(p.localId)} {p.golesLocal} - {p.golesVisitante} {nombreEquipo(p.visitanteId)}</div>
+          <div className="liga-vs">J{p.jornada} · {nombreEquipo(p.localId)} {p.golesLocal} - {p.golesVisitante} {nombreEquipo(p.visitanteId)}</div>
           <span className="liga-badge finalizado">Finalizado</span>
         </div>
       ))}
@@ -1140,7 +1140,7 @@ function MarcadorPartido({
 
   const minuto = minutosDe(p);
   const yaPuedeIniciar = esOrganizador || puedeIniciarAhora(p);
-  const iconoEvento = (t) => (t === "gol" ? "âš½" : t === "amarilla" ? "ðŸŸ¨" : t === "roja" ? "ðŸŸ¥" : "ðŸ”„");
+  const iconoEvento = (t) => (t === "gol" ? "⚽" : t === "amarilla" ? "🟨" : t === "roja" ? "🟥" : "🔄");
   const nombreLocal = nombreEquipo(p.localId);
   const nombreVisitante = nombreEquipo(p.visitanteId);
 
@@ -1154,12 +1154,12 @@ function MarcadorPartido({
     return ev;
   });
 
-  // El botÃ³n Ãºnico cambia de etiqueta segÃºn el momento del partido
+  // El botón único cambia de etiqueta según el momento del partido
   let etiquetaBoton = "Iniciar partido";
   let IconoBoton = Play;
   if (empezado) {
     if (corriendo) { etiquetaBoton = "Descanso"; IconoBoton = Pause; }
-    else if ((p.parte || 1) === 1) { etiquetaBoton = "Iniciar 2Âª parte"; IconoBoton = Play; }
+    else if ((p.parte || 1) === 1) { etiquetaBoton = "Iniciar 2ª parte"; IconoBoton = Play; }
     else { etiquetaBoton = "Reanudar"; IconoBoton = Play; }
   }
 
@@ -1186,7 +1186,7 @@ function MarcadorPartido({
         <div className="liga-marcador-centro">
           <div className="liga-marcador-num-row">
             <span className="liga-marcador-num">{p.golesLocal}</span>
-            <span className="liga-marcador-sep">â€“</span>
+            <span className="liga-marcador-sep">–</span>
             <span className="liga-marcador-num">{p.golesVisitante}</span>
           </div>
           <span className="liga-minuto">{minuto}'</span>
@@ -1209,26 +1209,26 @@ function MarcadorPartido({
           {empezado && (
             <>
               <button className="liga-boton-grande verde" onClick={() => registrarGol(p.id, p.localId)}>
-                âš½ Gol {nombreLocal}
+                ⚽ Gol {nombreLocal}
               </button>
               <button className="liga-boton-grande azul" onClick={() => registrarGol(p.id, p.visitanteId)}>
-                âš½ Gol {nombreVisitante}
+                ⚽ Gol {nombreVisitante}
               </button>
 
               <button className="liga-boton-grande ambar" onClick={() => setPanelAbierto(panelAbierto === "tarjeta" ? null : "tarjeta")}>
-                ðŸŸ¨ Tarjeta
+                🟨 Tarjeta
               </button>
               {panelAbierto === "tarjeta" && (
                 <div className="liga-subbotones">
-                  <button className="liga-boton-grande fantasma" onClick={() => { registrarTarjeta(p.id, p.localId, "amarilla"); setPanelAbierto(null); }}>ðŸŸ¨ {nombreLocal}</button>
-                  <button className="liga-boton-grande fantasma" onClick={() => { registrarTarjeta(p.id, p.visitanteId, "amarilla"); setPanelAbierto(null); }}>ðŸŸ¨ {nombreVisitante}</button>
-                  <button className="liga-boton-grande fantasma" onClick={() => { registrarTarjeta(p.id, p.localId, "roja"); setPanelAbierto(null); }}>ðŸŸ¥ {nombreLocal}</button>
-                  <button className="liga-boton-grande fantasma" onClick={() => { registrarTarjeta(p.id, p.visitanteId, "roja"); setPanelAbierto(null); }}>ðŸŸ¥ {nombreVisitante}</button>
+                  <button className="liga-boton-grande fantasma" onClick={() => { registrarTarjeta(p.id, p.localId, "amarilla"); setPanelAbierto(null); }}>🟨 {nombreLocal}</button>
+                  <button className="liga-boton-grande fantasma" onClick={() => { registrarTarjeta(p.id, p.visitanteId, "amarilla"); setPanelAbierto(null); }}>🟨 {nombreVisitante}</button>
+                  <button className="liga-boton-grande fantasma" onClick={() => { registrarTarjeta(p.id, p.localId, "roja"); setPanelAbierto(null); }}>🟥 {nombreLocal}</button>
+                  <button className="liga-boton-grande fantasma" onClick={() => { registrarTarjeta(p.id, p.visitanteId, "roja"); setPanelAbierto(null); }}>🟥 {nombreVisitante}</button>
                 </div>
               )}
 
               <button className="liga-boton-grande morado" onClick={() => setPanelAbierto(panelAbierto === "cambio" ? null : "cambio")}>
-                ðŸ”„ Cambio
+                🔄 Cambio
               </button>
               {panelAbierto === "cambio" && (
                 <div className="liga-subbotones">
@@ -1241,7 +1241,7 @@ function MarcadorPartido({
 
           {!empezado && !yaPuedeIniciar ? (
             <button className="liga-boton-grande gris" disabled style={{ opacity: 0.6, cursor: "not-allowed" }}>
-              ðŸ”’ Empieza a las {p.hora ? `${p.hora}h` : "la hora prevista"}
+              🔒 Empieza a las {p.hora ? `${p.hora}h` : "la hora prevista"}
             </button>
           ) : (
             <button className="liga-boton-grande gris" onClick={() => alternarCronometro(p.id)}>
@@ -1254,11 +1254,11 @@ function MarcadorPartido({
           )}
 
           {empezado && p.eventos && p.eventos.length > 0 && (
-            <button className="liga-boton-grande fantasma" onClick={() => deshacerEvento(p.id)}><Undo2 size={14} /> Deshacer Ãºltimo evento</button>
+            <button className="liga-boton-grande fantasma" onClick={() => deshacerEvento(p.id)}><Undo2 size={14} /> Deshacer último evento</button>
           )}
 
           {onVolver && (
-            <button className="liga-boton-grande fantasma" onClick={onVolver}>â† Volver a prÃ³ximos partidos</button>
+            <button className="liga-boton-grande fantasma" onClick={onVolver}>← Volver a próximos partidos</button>
           )}
         </div>
       )}
@@ -1266,14 +1266,14 @@ function MarcadorPartido({
   );
 }
 
-function VistaCalendario({ partidos, equipos, nombreEquipo, desbloqueado, aÃ±adirPartido, eliminarPartido }) {
+function VistaCalendario({ partidos, equipos, nombreEquipo, desbloqueado, añadirPartido, eliminarPartido }) {
   const [jornada, setJornada] = useState("1");
   const [fecha, setFecha] = useState("");
   const [localId, setLocalId] = useState("");
   const [visitanteId, setVisitanteId] = useState("");
 
   const crear = () => {
-    aÃ±adirPartido({ jornada, fecha, localId, visitanteId });
+    añadirPartido({ jornada, fecha, localId, visitanteId });
     setFecha(""); setLocalId(""); setVisitanteId("");
   };
 
@@ -1284,7 +1284,7 @@ function VistaCalendario({ partidos, equipos, nombreEquipo, desbloqueado, aÃ±a
   });
   const jornadas = Object.keys(porJornada).map(Number).sort((a, b) => a - b);
 
-  // Se abre por defecto la primera jornada que todavÃ­a tenga partidos sin finalizar
+  // Se abre por defecto la primera jornada que todavía tenga partidos sin finalizar
   const jornadaPorDefecto = jornadas.find((j) => porJornada[j].some((p) => p.estado !== "finalizado")) ?? jornadas[0];
   const [abierta, setAbierta] = useState(jornadaPorDefecto);
 
@@ -1295,11 +1295,11 @@ function VistaCalendario({ partidos, equipos, nombreEquipo, desbloqueado, aÃ±a
           <p className="liga-form-titulo">Crear partido</p>
           <div className="liga-grid2" style={{ marginBottom: 8 }}>
             <select className="liga-input" value={localId} onChange={(e) => setLocalId(e.target.value)}>
-              <option value="">Equipo localâ€¦</option>
+              <option value="">Equipo local…</option>
               {equipos.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
             </select>
             <select className="liga-input" value={visitanteId} onChange={(e) => setVisitanteId(e.target.value)}>
-              <option value="">Equipo visitanteâ€¦</option>
+              <option value="">Equipo visitante…</option>
               {equipos.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
             </select>
           </div>
@@ -1308,13 +1308,13 @@ function VistaCalendario({ partidos, equipos, nombreEquipo, desbloqueado, aÃ±a
             <input className="liga-input" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
           </div>
           <button className="liga-btn" disabled={!localId || !visitanteId || localId === visitanteId} onClick={crear}>
-            <Plus size={13} /> AÃ±adir al calendario
+            <Plus size={13} /> Añadir al calendario
           </button>
-          {equipos.length < 2 && <p className="liga-error">Necesitas al menos 2 equipos (pestaÃ±a Equipos).</p>}
+          {equipos.length < 2 && <p className="liga-error">Necesitas al menos 2 equipos (pestaña Equipos).</p>}
         </div>
       )}
 
-      {jornadas.length === 0 && <p className="liga-vacio">AÃºn no hay partidos en el calendario.</p>}
+      {jornadas.length === 0 && <p className="liga-vacio">Aún no hay partidos en el calendario.</p>}
       {jornadas.map((j) => {
         const partidosJ = porJornada[j];
         const jugados = partidosJ.filter((p) => p.estado === "finalizado").length;
@@ -1359,9 +1359,9 @@ function VistaCalendario({ partidos, equipos, nombreEquipo, desbloqueado, aÃ±a
 function VistaClasificacion({ tabla }) {
   return (
     <div>
-      <p className="liga-seccion-titulo">ClasificaciÃ³n</p>
+      <p className="liga-seccion-titulo">Clasificación</p>
       {tabla.length === 0 ? (
-        <p className="liga-vacio">AÃ±ade equipos para ver la clasificaciÃ³n.</p>
+        <p className="liga-vacio">Añade equipos para ver la clasificación.</p>
       ) : (
         <table className="liga-tabla">
           <thead>
@@ -1392,7 +1392,7 @@ function VistaGoleadores({ tabla }) {
       <p className="liga-seccion-titulo">Goleadores</p>
       {tabla.length === 0 ? (
         <p className="liga-vacio">
-          TodavÃ­a no hay datos de goleadores. Se irÃ¡n completando partido a partido.
+          Todavía no hay datos de goleadores. Se irán completando partido a partido.
         </p>
       ) : (
         <table className="liga-tabla">
@@ -1417,14 +1417,14 @@ function VistaGoleadores({ tabla }) {
   );
 }
 
-function VistaEquipos({ equipos, desbloqueado, aÃ±adirEquipo, eliminarEquipo }) {
+function VistaEquipos({ equipos, desbloqueado, añadirEquipo, eliminarEquipo }) {
   const [nombre, setNombre] = useState("");
-  const crear = () => { aÃ±adirEquipo(nombre); setNombre(""); };
+  const crear = () => { añadirEquipo(nombre); setNombre(""); };
   return (
     <div>
       {desbloqueado && (
         <div className="liga-form">
-          <p className="liga-form-titulo">AÃ±adir equipo</p>
+          <p className="liga-form-titulo">Añadir equipo</p>
           <div style={{ display: "flex", gap: 8 }}>
             <input
               className="liga-input"
@@ -1438,7 +1438,7 @@ function VistaEquipos({ equipos, desbloqueado, aÃ±adirEquipo, eliminarEquipo }
         </div>
       )}
       <p className="liga-seccion-titulo">Equipos ({equipos.length})</p>
-      {equipos.length === 0 && <p className="liga-vacio">TodavÃ­a no hay equipos registrados.</p>}
+      {equipos.length === 0 && <p className="liga-vacio">Todavía no hay equipos registrados.</p>}
       {equipos.map((e) => (
         <div key={e.id} className="liga-equipo-fila">
           <span>{e.nombre}</span>
