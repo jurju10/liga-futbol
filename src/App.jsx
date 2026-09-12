@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Lock, Unlock, Plus, Trash2, Play, CheckCircle2, Undo2, Pause, ChevronDown, ChevronRight, Pencil } from "lucide-react";
 
 const STORAGE_KEY = "liga-datos";
@@ -526,6 +526,8 @@ export default function App() {
   const [cargando, setCargando] = useState(true);
   const [pestaña, setPestaña] = useState("vivo");
   const [desbloqueado, setDesbloqueado] = useState(false);
+  const desbloqueadoRef = useRef(false);
+  useEffect(() => { desbloqueadoRef.current = desbloqueado; }, [desbloqueado]);
   const [partidoPermitido, setPartidoPermitido] = useState(null); // id del único partido que un ayudante puede editar
   const [mostrarGate, setMostrarGate] = useState(false);
   const [pasoGate, setPasoGate] = useState("pregunta"); // 'pregunta' | 'elegirPartido' | 'solicitar' | 'codigo' | 'confirmado'
@@ -540,13 +542,16 @@ export default function App() {
 
   const cargar = useCallback(async (silencioso) => {
     try {
-      const res = await window.storage.get(STORAGE_KEY, true);
-      if (res && res.value) {
-        setDatos(JSON.parse(res.value));
+      const res = await fetch("/api/liga-data", {
+        headers: desbloqueadoRef.current ? { "x-clave-organizador": CODIGO_EDICION } : {},
+      });
+      const texto = await res.text();
+      if (texto) {
+        setDatos(JSON.parse(texto));
       } else if (!silencioso) {
         const demo = datosDemo();
         setDatos(demo);
-        await window.storage.set(STORAGE_KEY, JSON.stringify(demo), true);
+        await fetch("/api/liga-data", { method: "POST", body: JSON.stringify(demo) });
       }
     } catch (e) {
       if (!silencioso) setDatos(datosDemo());
@@ -560,8 +565,11 @@ export default function App() {
   // como añadir o quitar una solicitud de colaboración.
   const leerDatosFrescos = async () => {
     try {
-      const res = await window.storage.get(STORAGE_KEY, true);
-      if (res && res.value) return JSON.parse(res.value);
+      const res = await fetch("/api/liga-data", {
+        headers: desbloqueadoRef.current ? { "x-clave-organizador": CODIGO_EDICION } : {},
+      });
+      const texto = await res.text();
+      if (texto) return JSON.parse(texto);
     } catch (e) {
       /* si falla, usamos lo que tengamos en memoria */
     }
@@ -570,8 +578,9 @@ export default function App() {
 
   const leerVisitas = useCallback(async () => {
     try {
-      const res = await window.storage.get(VISITAS_KEY, true);
-      setVisitas(res && res.value ? parseInt(res.value, 10) || 0 : 0);
+      const res = await fetch("/api/visitas");
+      const texto = await res.text();
+      setVisitas(parseInt(texto, 10) || 0);
     } catch (e) {
       /* no pasa nada si falla, solo es un contador informativo */
     }
@@ -579,11 +588,9 @@ export default function App() {
 
   const registrarVisita = useCallback(async () => {
     try {
-      const res = await window.storage.get(VISITAS_KEY, true);
-      const actual = res && res.value ? parseInt(res.value, 10) || 0 : 0;
-      const nuevo = actual + 1;
-      await window.storage.set(VISITAS_KEY, String(nuevo), true);
-      setVisitas(nuevo);
+      const res = await fetch("/api/visitas", { method: "POST" });
+      const texto = await res.text();
+      setVisitas(parseInt(texto, 10) || 0);
     } catch (e) {
       /* no pasa nada si falla, solo es un contador informativo */
     }
@@ -600,7 +607,7 @@ export default function App() {
   const guardar = async (nuevo) => {
     setDatos(nuevo);
     try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify(nuevo), true);
+      await fetch("/api/liga-data", { method: "POST", body: JSON.stringify(nuevo) });
     } catch (e) {
       console.error("Error guardando datos", e);
     }
