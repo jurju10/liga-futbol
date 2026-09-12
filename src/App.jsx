@@ -773,9 +773,9 @@ export default function App() {
       cerrarGate();
       return;
     }
-    const solicitudCoincide = solicitudes.find((s) => s.clave && s.clave === valor.toUpperCase());
-    if (solicitudCoincide) {
-      setPartidoPermitido(solicitudCoincide.partidoId);
+    const partidoConClave = partidos.find((p) => p.ayudanteClave && p.ayudanteClave === valor.toUpperCase());
+    if (partidoConClave) {
+      setPartidoPermitido(partidoConClave.id);
       setDesbloqueado(false);
       setPestaña("vivo");
       cerrarGate();
@@ -817,8 +817,17 @@ export default function App() {
     }
     const clave = Math.random().toString(36).slice(2, 7).toUpperCase();
     // Leemos el dato más reciente justo antes de guardar (no el que ya teníamos en memoria,
-    // que puede llevar hasta 15s desfasado) para no pisar solicitudes creadas por otros mientras tanto.
+    // que puede llevar hasta 15s desfasado) para no pisar cambios de otros mientras tanto.
     const actual = await leerDatosFrescos();
+    const partido = (actual.partidos || []).find((x) => x.id === partidoSeleccionado);
+    if (!partido || partido.ayudanteEmail) {
+      setErrorGate("Ese partido ya no está disponible, vuelve atrás y elige otro.");
+      return;
+    }
+    // El ayudante se guarda en el propio partido: es la fuente principal de verdad,
+    // así no depende de un array aparte que se pueda perder por una escritura simultánea.
+    partido.ayudanteEmail = correo;
+    partido.ayudanteClave = clave;
     actual.solicitudes = actual.solicitudes || [];
     actual.solicitudes.push({ id: uid(), email: correo, partidoId: partidoSeleccionado, clave, fecha: Date.now() });
     guardar(actual);
@@ -831,9 +840,14 @@ export default function App() {
     setErrorGate("");
   };
 
-  const eliminarSolicitud = async (id) => {
+  const liberarAyudante = async (partidoId) => {
     const actual = await leerDatosFrescos();
-    actual.solicitudes = (actual.solicitudes || []).filter((s) => s.id !== id);
+    const partido = (actual.partidos || []).find((x) => x.id === partidoId);
+    if (partido) {
+      delete partido.ayudanteEmail;
+      delete partido.ayudanteClave;
+    }
+    actual.solicitudes = (actual.solicitudes || []).filter((s) => s.partidoId !== partidoId);
     guardar(actual);
   };
 
@@ -846,7 +860,10 @@ export default function App() {
   // Solo se puede solicitar ayuda para partidos de la jornada más próxima sin jugar
   const jornadaParaSolicitudes = proximos.length ? Math.min(...proximos.map((p) => p.jornada)) : null;
   const partidosParaSolicitudes = proximos.filter((p) => p.jornada === jornadaParaSolicitudes);
-  const partidoCubierto = (partidoId) => solicitudes.some((s) => s.partidoId === partidoId);
+  const partidoCubierto = (partidoId) => {
+    const partido = partidos.find((p) => p.id === partidoId);
+    return !!(partido && partido.ayudanteEmail);
+  };
   const modoRestringido = desbloqueado || !!partidoPermitido;
   const puedeEditar = (partidoId) => desbloqueado || partidoPermitido === partidoId;
 
@@ -864,7 +881,7 @@ export default function App() {
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {desbloqueado && (
             <button className="liga-candado-btn" onClick={() => setMostrarSolicitudes(true)}>
-              Ayudantes{solicitudes.length > 0 ? ` (${solicitudes.length})` : ""}
+              Ayudantes{(() => { const n = partidos.filter((p) => p.ayudanteEmail).length; return n > 0 ? ` (${n})` : ""; })()}
             </button>
           )}
           <button
@@ -1087,29 +1104,28 @@ export default function App() {
             <p style={{ fontSize: 12, color: "var(--ink-soft)", marginBottom: 10 }}>
               Se desbloquean solos al elegir partido; aquí solo queda constancia de quién es cada uno.
             </p>
-            {solicitudes.length === 0 && <p className="liga-vacio">Todavía no se ha apuntado nadie.</p>}
-            {solicitudes.map((s) => {
-              const pp = partidos.find((x) => x.id === s.partidoId);
-              return (
-                <div key={s.id} className="liga-solicitud-fila">
-                  <span style={{ fontSize: 13.5 }}>
-                    <span style={{ wordBreak: "break-all" }}>{s.email}</span>
-                    <br />
-                    <span style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>
-                      {pp ? `${nombreEquipo(pp.localId)} vs ${nombreEquipo(pp.visitanteId)}` : "Partido eliminado"}
-                      {s.clave ? ` · clave ${s.clave}` : ""}
-                    </span>
+            {partidos.filter((p) => p.ayudanteEmail).length === 0 && (
+              <p className="liga-vacio">Todavía no se ha apuntado nadie.</p>
+            )}
+            {partidos.filter((p) => p.ayudanteEmail).map((p) => (
+              <div key={p.id} className="liga-solicitud-fila">
+                <span style={{ fontSize: 13.5 }}>
+                  <span style={{ wordBreak: "break-all" }}>{p.ayudanteEmail}</span>
+                  <br />
+                  <span style={{ fontSize: 11.5, color: "var(--ink-soft)" }}>
+                    {nombreEquipo(p.localId)} vs {nombreEquipo(p.visitanteId)}
+                    {p.ayudanteClave ? ` · clave ${p.ayudanteClave}` : ""}
                   </span>
-                  <button
-                    className="liga-x-btn"
-                    title="Liberar este partido para que otra persona pueda apuntarse"
-                    onClick={() => eliminarSolicitud(s.id)}
-                  >
-                    <Trash2 size={15} />
-                  </button>
-                </div>
-              );
-            })}
+                </span>
+                <button
+                  className="liga-x-btn"
+                  title="Liberar este partido para que otra persona pueda apuntarse"
+                  onClick={() => liberarAyudante(p.id)}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            ))}
             <button className="liga-btn secundario" style={{ marginTop: 14 }} onClick={() => setMostrarSolicitudes(false)}>Cerrar</button>
           </div>
         </div>
