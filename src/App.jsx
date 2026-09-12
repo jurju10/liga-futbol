@@ -636,16 +636,7 @@ const guardar = async (nuevo) => {
     return () => { clearInterval(iv); clearInterval(ivVisitas); };
   }, [cargar, registrarVisita, leerVisitas]);
 
-  const guardar = async (nuevo) => {
-    setDatos(nuevo);
-    try {
-      await window.storage.set(STORAGE_KEY, JSON.stringify(nuevo), true);
-    } catch (e) {
-      console.error("Error guardando datos", e);
-    }
-  };
-
-  if (cargando || !datos) {
+    if (cargando || !datos) {
     return (
       <div className="liga-app" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
         <style>{ESTILOS}</style>
