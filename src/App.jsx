@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Lock, Unlock, Plus, Trash2, Play, CheckCircle2, Undo2, Pause, ChevronDown, ChevronRight } from "lucide-react";
+import { Lock, Unlock, Plus, Trash2, Play, CheckCircle2, Undo2, Pause, ChevronDown, ChevronRight, Pencil } from "lucide-react";
 
 const STORAGE_KEY = "liga-datos";
 const VISITAS_KEY = "liga-visitas";
@@ -353,7 +353,14 @@ const ESTILOS = `
   color: var(--ink);
 }
 .liga-candado-btn.desbloqueado { background: var(--pitch); border-color: var(--pitch); color: var(--paper); }
-.liga-visitas { font-size: 12px; color: var(--ink-soft); white-space: nowrap; }
+.liga-visitas {
+  font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap;
+  border: 1.5px solid var(--ink); border-radius: 4px; padding: 6px 10px; background: var(--paper-dark);
+}
+.liga-barra-admin { background: var(--gold); padding: 8px 16px; display: flex; justify-content: center; }
+.liga-fila-editable { border-bottom: 1px dashed var(--line); }
+.liga-fila-editable:last-child { border-bottom: none; }
+.liga-fila-editable .liga-fila-compacta { border-bottom: none; }
 .liga-tabs {
   display: flex;
   overflow-x: auto;
@@ -714,6 +721,30 @@ export default function App() {
     guardar(nuevo);
   };
 
+  // --- Corrección manual (solo organizador): permite arreglar cualquier dato si algo salió mal ---
+  const actualizarPartidoManual = (id, cambios) => {
+    const nuevo = clonar(datos);
+    const p = buscarPartido(nuevo, id);
+    if (!p) return;
+    Object.assign(p, cambios);
+    guardar(nuevo);
+  };
+  const eliminarEventoManual = (partidoId, eventoId) => {
+    const nuevo = clonar(datos);
+    const p = buscarPartido(nuevo, partidoId);
+    if (!p) return;
+    p.eventos = (p.eventos || []).filter((e) => e.id !== eventoId);
+    guardar(nuevo);
+  };
+  const añadirEventoManual = (partidoId, evento) => {
+    const nuevo = clonar(datos);
+    const p = buscarPartido(nuevo, partidoId);
+    if (!p) return;
+    p.eventos = p.eventos || [];
+    p.eventos.push({ ...evento, id: uid() });
+    guardar(nuevo);
+  };
+
   const intentarDesbloquear = () => {
     const valor = codigoInput.trim();
     if (valor === CODIGO_EDICION) {
@@ -811,14 +842,9 @@ export default function App() {
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {desbloqueado && (
-            <>
-              <span className="liga-visitas" title="Visitas totales a la web">
-                👁 {visitas === null ? "…" : visitas}
-              </span>
-              <button className="liga-candado-btn" onClick={() => setMostrarSolicitudes(true)}>
-                Ayudantes{solicitudes.length > 0 ? ` (${solicitudes.length})` : ""}
-              </button>
-            </>
+            <button className="liga-candado-btn" onClick={() => setMostrarSolicitudes(true)}>
+              Ayudantes{solicitudes.length > 0 ? ` (${solicitudes.length})` : ""}
+            </button>
           )}
           <button
             className={`liga-candado-btn ${modoRestringido ? "desbloqueado" : ""}`}
@@ -831,8 +857,21 @@ export default function App() {
             {modoRestringido ? <Unlock size={15} /> : <Lock size={15} />}
             {desbloqueado ? "Modo edición" : partidoPermitido ? "Ayudando en 1 partido" : "Ayudante"}
           </button>
+          {desbloqueado && (
+            <span className="liga-visitas" title="Visitas totales a la web">
+              {visitas === null ? "…" : visitas}
+            </span>
+          )}
         </div>
       </div>
+
+      {desbloqueado && (
+        <div className="liga-barra-admin">
+          <button className="liga-btn secundario" onClick={() => setPestaña(pestaña === "editor" ? "vivo" : "editor")}>
+            {pestaña === "editor" ? <>← Volver a En vivo</> : <><Pencil size={13} /> Editar todo (corregir errores)</>}
+          </button>
+        </div>
+      )}
 
       <div className="liga-tabs">
         {(modoRestringido
@@ -852,7 +891,7 @@ export default function App() {
       </div>
 
       <div className="liga-contenido">
-        {(modoRestringido ? "vivo" : pestaña) === "vivo" && (
+        {((modoRestringido && pestaña !== "editor") ? "vivo" : pestaña) === "vivo" && (
           <VistaVivo
             enVivo={enVivo}
             proximos={proximos}
@@ -876,12 +915,36 @@ export default function App() {
             desbloqueado={desbloqueado}
             añadirPartido={añadirPartido}
             eliminarPartido={eliminarPartido}
+            actualizarPartidoManual={actualizarPartidoManual}
+            eliminarEventoManual={eliminarEventoManual}
+            añadirEventoManual={añadirEventoManual}
           />
         )}
         {!modoRestringido && pestaña === "clasificacion" && <VistaClasificacion tabla={clasificacion} />}
         {!modoRestringido && pestaña === "goleadores" && <VistaGoleadores tabla={goleadores} />}
         {!modoRestringido && pestaña === "equipos" && (
           <VistaEquipos equipos={equipos} desbloqueado={desbloqueado} añadirEquipo={añadirEquipo} eliminarEquipo={eliminarEquipo} />
+        )}
+        {desbloqueado && pestaña === "editor" && (
+          <div>
+            <p className="liga-seccion-titulo">Editor completo (organizador)</p>
+            <p style={{ fontSize: 12.5, color: "var(--ink-soft)", marginBottom: 4 }}>
+              Aquí puedes corregir cualquier dato: equipos, calendario, marcadores, estado del
+              partido y la lista de goles/tarjetas de cada uno.
+            </p>
+            <VistaEquipos equipos={equipos} desbloqueado={desbloqueado} añadirEquipo={añadirEquipo} eliminarEquipo={eliminarEquipo} />
+            <VistaCalendario
+              partidos={partidos}
+              equipos={equipos}
+              nombreEquipo={nombreEquipo}
+              desbloqueado={desbloqueado}
+              añadirPartido={añadirPartido}
+              eliminarPartido={eliminarPartido}
+              actualizarPartidoManual={actualizarPartidoManual}
+              eliminarEventoManual={eliminarEventoManual}
+              añadirEventoManual={añadirEventoManual}
+            />
+          </div>
         )}
       </div>
 
@@ -1266,7 +1329,10 @@ function MarcadorPartido({
   );
 }
 
-function VistaCalendario({ partidos, equipos, nombreEquipo, desbloqueado, añadirPartido, eliminarPartido }) {
+function VistaCalendario({
+  partidos, equipos, nombreEquipo, desbloqueado, añadirPartido, eliminarPartido,
+  actualizarPartidoManual, eliminarEventoManual, añadirEventoManual,
+}) {
   const [jornada, setJornada] = useState("1");
   const [fecha, setFecha] = useState("");
   const [localId, setLocalId] = useState("");
@@ -1330,28 +1396,146 @@ function VistaCalendario({ partidos, equipos, nombreEquipo, desbloqueado, añadi
             {abiertaAhora && (
               <div className="liga-jornada-cuerpo">
                 {partidosJ.map((p) => (
-                  <div key={p.id} className="liga-fila-compacta">
-                    <div>
-                      <div className="liga-vs">
-                        {nombreEquipo(p.localId)} {p.estado === "programado" ? "vs" : `${p.golesLocal} - ${p.golesVisitante}`} {nombreEquipo(p.visitanteId)}
-                      </div>
-                      <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>{formatearFecha(p)}</div>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span className={`liga-badge ${p.estado === "en_vivo" ? "finalizado" : p.estado}`}>
-                        {p.estado === "en_vivo" ? "En vivo" : p.estado === "finalizado" ? "Finalizado" : "Programado"}
-                      </span>
-                      {desbloqueado && (
-                        <button className="liga-x-btn" onClick={() => eliminarPartido(p.id)}><Trash2 size={15} /></button>
-                      )}
-                    </div>
-                  </div>
+                  <FilaPartidoCalendario
+                    key={p.id}
+                    p={p}
+                    equipos={equipos}
+                    nombreEquipo={nombreEquipo}
+                    desbloqueado={desbloqueado}
+                    eliminarPartido={eliminarPartido}
+                    actualizarPartidoManual={actualizarPartidoManual}
+                    eliminarEventoManual={eliminarEventoManual}
+                    añadirEventoManual={añadirEventoManual}
+                  />
                 ))}
               </div>
             )}
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function FilaPartidoCalendario({
+  p, equipos, nombreEquipo, desbloqueado, eliminarPartido,
+  actualizarPartidoManual, eliminarEventoManual, añadirEventoManual,
+}) {
+  const [editando, setEditando] = useState(false);
+  const [estado, setEstado] = useState(p.estado);
+  const [golesLocal, setGolesLocal] = useState(p.golesLocal);
+  const [golesVisitante, setGolesVisitante] = useState(p.golesVisitante);
+  const [fecha, setFecha] = useState(p.fecha || "");
+  const [hora, setHora] = useState(p.hora || "");
+
+  const [nuevoTipo, setNuevoTipo] = useState("gol");
+  const [nuevoEquipo, setNuevoEquipo] = useState(p.localId);
+  const [nuevoMinuto, setNuevoMinuto] = useState("");
+  const [nuevoJugador, setNuevoJugador] = useState("");
+
+  const abrir = () => {
+    setEstado(p.estado);
+    setGolesLocal(p.golesLocal);
+    setGolesVisitante(p.golesVisitante);
+    setFecha(p.fecha || "");
+    setHora(p.hora || "");
+    setEditando(true);
+  };
+
+  const guardarCambios = () => {
+    actualizarPartidoManual(p.id, {
+      estado,
+      golesLocal: Number(golesLocal) || 0,
+      golesVisitante: Number(golesVisitante) || 0,
+      fecha,
+      hora,
+    });
+    setEditando(false);
+  };
+
+  const añadirEvento = () => {
+    if (!nuevoMinuto) return;
+    añadirEventoManual(p.id, { tipo: nuevoTipo, equipoId: nuevoEquipo, minuto: Number(nuevoMinuto), jugador: nuevoJugador.trim() });
+    setNuevoMinuto("");
+    setNuevoJugador("");
+  };
+
+  return (
+    <div className="liga-fila-editable">
+      <div className="liga-fila-compacta" style={{ borderBottom: editando ? "none" : undefined }}>
+        <div>
+          <div className="liga-vs">
+            {nombreEquipo(p.localId)} {p.estado === "programado" ? "vs" : `${p.golesLocal} - ${p.golesVisitante}`} {nombreEquipo(p.visitanteId)}
+          </div>
+          <div style={{ fontSize: 12, color: "var(--ink-soft)" }}>{formatearFecha(p)}</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span className={`liga-badge ${p.estado === "en_vivo" ? "finalizado" : p.estado}`}>
+            {p.estado === "en_vivo" ? "En vivo" : p.estado === "finalizado" ? "Finalizado" : "Programado"}
+          </span>
+          {desbloqueado && (
+            <>
+              <button className="liga-x-btn" title="Corregir este partido" onClick={() => (editando ? setEditando(false) : abrir())}>
+                <Pencil size={15} />
+              </button>
+              <button className="liga-x-btn" onClick={() => eliminarPartido(p.id)}><Trash2 size={15} /></button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {editando && (
+        <div className="liga-form" style={{ marginTop: 0, marginBottom: 14 }}>
+          <p className="liga-form-titulo">Corregir partido</p>
+          <div className="liga-grid2" style={{ marginBottom: 8 }}>
+            <select className="liga-input" value={estado} onChange={(e) => setEstado(e.target.value)}>
+              <option value="programado">Programado</option>
+              <option value="en_vivo">En vivo</option>
+              <option value="finalizado">Finalizado</option>
+            </select>
+            <div className="liga-grid2" style={{ gap: 8 }}>
+              <input className="liga-input" type="number" value={golesLocal} onChange={(e) => setGolesLocal(e.target.value)} placeholder="Goles local" />
+              <input className="liga-input" type="number" value={golesVisitante} onChange={(e) => setGolesVisitante(e.target.value)} placeholder="Goles visitante" />
+            </div>
+          </div>
+          <div className="liga-grid2" style={{ marginBottom: 10 }}>
+            <input className="liga-input" type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} />
+            <input className="liga-input" type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
+          </div>
+          <button className="liga-btn" onClick={guardarCambios}>Guardar cambios</button>
+
+          <p className="liga-form-titulo" style={{ marginTop: 18 }}>Goles y tarjetas registrados</p>
+          {(p.eventos || []).length === 0 && <p className="liga-vacio" style={{ padding: "6px 0" }}>Sin eventos.</p>}
+          {(p.eventos || []).map((ev) => (
+            <div key={ev.id} className="liga-solicitud-fila">
+              <span style={{ fontSize: 13 }}>
+                {ev.minuto}' · {ev.tipo === "gol" ? "⚽" : ev.tipo === "amarilla" ? "🟨" : ev.tipo === "roja" ? "🟥" : "🔄"}{" "}
+                {ev.jugador ? `${ev.jugador} · ` : ""}{nombreEquipo(ev.equipoId)}
+              </span>
+              <button className="liga-x-btn" onClick={() => eliminarEventoManual(p.id, ev.id)}><Trash2 size={14} /></button>
+            </div>
+          ))}
+
+          <p className="liga-form-titulo" style={{ marginTop: 12 }}>Añadir evento</p>
+          <div className="liga-grid2" style={{ marginBottom: 8 }}>
+            <select className="liga-input" value={nuevoTipo} onChange={(e) => setNuevoTipo(e.target.value)}>
+              <option value="gol">⚽ Gol</option>
+              <option value="amarilla">🟨 Amarilla</option>
+              <option value="roja">🟥 Roja</option>
+              <option value="cambio">🔄 Cambio</option>
+            </select>
+            <select className="liga-input" value={nuevoEquipo} onChange={(e) => setNuevoEquipo(e.target.value)}>
+              <option value={p.localId}>{nombreEquipo(p.localId)}</option>
+              <option value={p.visitanteId}>{nombreEquipo(p.visitanteId)}</option>
+            </select>
+          </div>
+          <div className="liga-grid2" style={{ marginBottom: 8 }}>
+            <input className="liga-input" type="number" placeholder="Minuto" value={nuevoMinuto} onChange={(e) => setNuevoMinuto(e.target.value)} />
+            <input className="liga-input" type="text" placeholder="Jugador (opcional)" value={nuevoJugador} onChange={(e) => setNuevoJugador(e.target.value)} />
+          </div>
+          <button className="liga-btn secundario" onClick={añadirEvento}><Plus size={13} /> Añadir evento</button>
+        </div>
+      )}
     </div>
   );
 }
