@@ -628,8 +628,7 @@ const guardar = async (nuevo) => {
     console.error("Error guardando datos", e);
   }
 };
-    }
-  }, []);
+      }, []);
 
   useEffect(() => {
     cargar(false);
