@@ -517,56 +517,117 @@ const ESTILOS = `
 
 export default function App() {
   const [datos, setDatos] = useState(null);
-  const [cargando, setCargando] = useState(true);
-  const [pestaña, setPestaña] = useState("vivo");
-  const [desbloqueado, setDesbloqueado] = useState(false);
-  const [partidoPermitido, setPartidoPermitido] = useState(null); // id del único partido que un ayudante puede editar
-  const [mostrarGate, setMostrarGate] = useState(false);
-  const [pasoGate, setPasoGate] = useState("pregunta"); // 'pregunta' | 'elegirPartido' | 'solicitar' | 'codigo' | 'confirmado'
-  const [partidoSeleccionado, setPartidoSeleccionado] = useState(null);
-  const [claveGenerada, setClaveGenerada] = useState("");
-  const [avisoCubierto, setAvisoCubierto] = useState("");
-  const [emailInput, setEmailInput] = useState("");
-  const [codigoInput, setCodigoInput] = useState("");
-  const [errorGate, setErrorGate] = useState("");
-  const [mostrarSolicitudes, setMostrarSolicitudes] = useState(false);
-  const [visitas, setVisitas] = useState(null);
-
   const cargar = useCallback(async (silencioso) => {
-    try {
-      const res = await window.storage.get(STORAGE_KEY, true);
-      if (res && res.value) {
-        setDatos(JSON.parse(res.value));
-      } else if (!silencioso) {
-        const demo = datosDemo();
-        setDatos(demo);
-        await window.storage.set(STORAGE_KEY, JSON.stringify(demo), true);
-      }
-    } catch (e) {
-      if (!silencioso) setDatos(datosDemo());
-    } finally {
-      if (!silencioso) setCargando(false);
-    }
-  }, []);
+  try {
+    const headers = desbloqueado
+      ? { "x-clave-organizador": CODIGO_EDICION }
+      : {};
 
-  const leerVisitas = useCallback(async () => {
-    try {
-      const res = await window.storage.get(VISITAS_KEY, true);
-      setVisitas(res && res.value ? parseInt(res.value, 10) || 0 : 0);
-    } catch (e) {
-      /* no pasa nada si falla, solo es un contador informativo */
-    }
-  }, []);
+    const res = await fetch("/api/liga-data", {
+      method: "GET",
+      headers,
+      cache: "no-store",
+    });
 
-  const registrarVisita = useCallback(async () => {
-    try {
-      const res = await window.storage.get(VISITAS_KEY, true);
-      const actual = res && res.value ? parseInt(res.value, 10) || 0 : 0;
-      const nuevo = actual + 1;
-      await window.storage.set(VISITAS_KEY, String(nuevo), true);
-      setVisitas(nuevo);
-    } catch (e) {
-      /* no pasa nada si falla, solo es un contador informativo */
+    if (!res.ok) throw new Error(`Error cargando datos: ${res.status}`);
+
+    const texto = await res.text();
+
+    if (texto) {
+      setDatos(JSON.parse(texto));
+    } else if (!silencioso) {
+      const demo = datosDemo();
+      setDatos(demo);
+
+      await fetch("/api/liga-data", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-clave-organizador": CODIGO_EDICION,
+        },
+        body: JSON.stringify(demo),
+      });
+    }
+  } catch (e) {
+    console.error("Error cargando datos", e);
+
+    if (!silencioso) {
+      setDatos(datosDemo());
+    }
+  } finally {
+    if (!silencioso) setCargando(false);
+  }
+}, [desbloqueado]);
+
+const leerVisitas = useCallback(async () => {
+  try {
+    const res = await fetch("/api/visitas", {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (!res.ok) return;
+
+    const texto = await res.text();
+    setVisitas(parseInt(texto, 10) || 0);
+  } catch (e) {
+    /* no pasa nada si falla */
+  }
+}, []);
+
+const registrarVisita = useCallback(async () => {
+  try {
+    const res = await fetch("/api/visitas", {
+      method: "POST",
+    });
+
+    if (!res.ok) return;
+
+    const texto = await res.text();
+    setVisitas(parseInt(texto, 10) || 0);
+  } catch (e) {
+    /* no pasa nada si falla */
+  }
+}, []);
+
+useEffect(() => {
+  cargar(false);
+  registrarVisita();
+
+  const iv = setInterval(() => cargar(true), 5000);
+  const ivVisitas = setInterval(leerVisitas, 15000);
+
+  return () => {
+    clearInterval(iv);
+    clearInterval(ivVisitas);
+  };
+}, [cargar, registrarVisita, leerVisitas]);
+
+const guardar = async (nuevo) => {
+  setDatos(nuevo);
+
+  try {
+    const headers = {
+      "Content-Type": "application/json",
+    };
+
+    if (desbloqueado) {
+      headers["x-clave-organizador"] = CODIGO_EDICION;
+    }
+
+    const res = await fetch("/api/liga-data", {
+      method: "POST",
+      headers,
+      body: JSON.stringify(nuevo),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Error guardando datos: ${res.status}`);
+    }
+  } catch (e) {
+    console.error("Error guardando datos", e);
+  }
+};
     }
   }, []);
 
