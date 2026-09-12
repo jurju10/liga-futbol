@@ -247,6 +247,12 @@ function horaProgramadaDe(p) {
   const fechaHora = new Date(`${p.fecha}T${horaStr}:00`);
   return isNaN(fechaHora.getTime()) ? null : fechaHora;
 }
+// Ordena por fecha+hora ascendente (más próximo primero); sin fecha, al final.
+function compararPorFechaHora(a, b) {
+  const da = a.fecha ? `${a.fecha}T${a.hora || "00:00"}` : "9999-99-99T99:99";
+  const db = b.fecha ? `${b.fecha}T${b.hora || "00:00"}` : "9999-99-99T99:99";
+  return da.localeCompare(db);
+}
 // Si no conocemos la hora prevista, no podemos restringir y se deja iniciar.
 function puedeIniciarAhora(p) {
   const prog = horaProgramadaDe(p);
@@ -549,6 +555,19 @@ export default function App() {
     }
   }, []);
 
+  // Lee el dato tal cual está guardado justo en este instante (no el que ya tenemos en memoria,
+  // que puede llevar hasta 15s desfasado). Se usa antes de escrituras sensibles a carreras,
+  // como añadir o quitar una solicitud de colaboración.
+  const leerDatosFrescos = async () => {
+    try {
+      const res = await window.storage.get(STORAGE_KEY, true);
+      if (res && res.value) return JSON.parse(res.value);
+    } catch (e) {
+      /* si falla, usamos lo que tengamos en memoria */
+    }
+    return clonar(datos);
+  };
+
   const leerVisitas = useCallback(async () => {
     try {
       const res = await window.storage.get(VISITAS_KEY, true);
@@ -786,7 +805,7 @@ export default function App() {
     setPasoGate("solicitar");
   };
 
-  const enviarSolicitud = () => {
+  const enviarSolicitud = async () => {
     const correo = emailInput.trim();
     if (!correo || !correo.includes("@")) {
       setErrorGate("Escribe un email válido.");
@@ -797,10 +816,12 @@ export default function App() {
       return;
     }
     const clave = Math.random().toString(36).slice(2, 7).toUpperCase();
-    const nuevo = clonar(datos);
-    nuevo.solicitudes = nuevo.solicitudes || [];
-    nuevo.solicitudes.push({ id: uid(), email: correo, partidoId: partidoSeleccionado, clave, fecha: Date.now() });
-    guardar(nuevo);
+    // Leemos el dato más reciente justo antes de guardar (no el que ya teníamos en memoria,
+    // que puede llevar hasta 15s desfasado) para no pisar solicitudes creadas por otros mientras tanto.
+    const actual = await leerDatosFrescos();
+    actual.solicitudes = actual.solicitudes || [];
+    actual.solicitudes.push({ id: uid(), email: correo, partidoId: partidoSeleccionado, clave, fecha: Date.now() });
+    guardar(actual);
     // Autoservicio: se concede acceso al instante, pero SOLO para el partido elegido
     setPartidoPermitido(partidoSeleccionado);
     setDesbloqueado(false);
@@ -810,10 +831,10 @@ export default function App() {
     setErrorGate("");
   };
 
-  const eliminarSolicitud = (id) => {
-    const nuevo = clonar(datos);
-    nuevo.solicitudes = (nuevo.solicitudes || []).filter((s) => s.id !== id);
-    guardar(nuevo);
+  const eliminarSolicitud = async (id) => {
+    const actual = await leerDatosFrescos();
+    actual.solicitudes = (actual.solicitudes || []).filter((s) => s.id !== id);
+    guardar(actual);
   };
 
   const enVivo = partidos.filter((p) => p.estado === "en_vivo").sort((a, b) => a.jornada - b.jornada);
@@ -1128,7 +1149,7 @@ function VistaVivo({
       {proximos.length === 0 && <p className="liga-vacio">No hay partidos programados.</p>}
       {proximos.length > 0 && (() => {
         const jornadaActual = Math.min(...proximos.map((p) => p.jornada));
-        const deEstaJornada = proximos.filter((p) => p.jornada === jornadaActual);
+        const deEstaJornada = proximos.filter((p) => p.jornada === jornadaActual).sort(compararPorFechaHora);
         const jornadasPendientes = new Set(proximos.map((p) => p.jornada)).size;
         return (
           <>
@@ -1348,6 +1369,7 @@ function VistaCalendario({
     porJornada[p.jornada] = porJornada[p.jornada] || [];
     porJornada[p.jornada].push(p);
   });
+  Object.values(porJornada).forEach((lista) => lista.sort(compararPorFechaHora));
   const jornadas = Object.keys(porJornada).map(Number).sort((a, b) => a - b);
 
   // Se abre por defecto la primera jornada que todavía tenga partidos sin finalizar
