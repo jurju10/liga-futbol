@@ -167,14 +167,70 @@ const HORARIOS_J3 = {
   "16-4": { fecha: "2026-09-20", hora: "17:00" },  // Unionistas Salamanca - Athletic Club
 };
 
+// Resultados y goleadores reales de la Jornada 2, confirmados por el usuario vía Sofascore.
+const RESULTADOS_J2 = {
+  "9-12": [1, 2],  // SD Indautxu 1-2 Santutxu FC
+  "3-16": [0, 1],  // CD Arratia 0-1 Unionistas Salamanca
+  "2-4": [2, 3],   // Antiguoko KE 2-3 Athletic Club
+  "11-10": [3, 1], // Real Valladolid 3-1 Real Sociedad
+  "5-1": [2, 2],   // Cultural Leonesa 2-2 Deportivo Alavés
+  "7-14": [2, 1],  // Danok Bat 2-1 SD Leioa
+  "13-8": [3, 0],  // SD Eibar 3-0 EF Mareo
+  "15-6": [2, 1],  // UD Logroñés 2-1 CD Betoño
+};
+const EVENTOS_J2 = {
+  "9-12": [
+    { minuto: 40, tipo: "gol", equipo: "local", jugador: "Jon Larrondo" },
+    { minuto: 47, tipo: "gol", equipo: "visitante", jugador: "Ibai Henales" },
+    { minuto: 50, tipo: "gol", equipo: "visitante", jugador: "Sebastian Amaya" },
+  ],
+  "3-16": [
+    { minuto: 45, tipo: "gol", equipo: "visitante", jugador: "Pablo Sanchez Gala" },
+  ],
+  "2-4": [
+    { minuto: 31, tipo: "gol", equipo: "visitante", jugador: "Alex Esnaola" },
+    { minuto: 37, tipo: "gol", equipo: "local", jugador: "Mikel Carcedo" },
+    { minuto: 42, tipo: "gol", equipo: "local", jugador: "Mikel Carcedo" },
+    { minuto: 48, tipo: "gol", equipo: "visitante", jugador: "Unax Lopez" },
+    { minuto: 81, tipo: "gol", equipo: "visitante", jugador: "J. Regulez" },
+  ],
+  "11-10": [
+    { minuto: 17, tipo: "gol", equipo: "local", jugador: "Sergio Merino Caparros" },
+    { minuto: 19, tipo: "gol", equipo: "local", jugador: "A. Iguaz" },
+    { minuto: 26, tipo: "gol", equipo: "local", jugador: "J. Sanchez" },
+    { minuto: 64, tipo: "gol", equipo: "visitante", jugador: "Ibai Galparsoro Barandiaran" },
+  ],
+  "5-1": [
+    { minuto: 17, tipo: "gol", equipo: "local", jugador: "Gaizka Larrauri" },
+    { minuto: 43, tipo: "gol", equipo: "visitante", jugador: "Jorge Esteban" },
+    { minuto: 52, tipo: "gol", equipo: "local", jugador: "Hugo Garcia" },
+    { minuto: 59, tipo: "gol", equipo: "visitante", jugador: "Jorge Esteban" },
+  ],
+  "7-14": [
+    { minuto: 8, tipo: "gol", equipo: "visitante", jugador: "A. B. Morgado" },
+    { minuto: 89, tipo: "gol", equipo: "local", jugador: "D. M. Ibarloza" },
+    { minuto: 92, tipo: "gol", equipo: "local", jugador: "D. M. Ibarloza" },
+  ],
+  "13-8": [
+    { minuto: 31, tipo: "gol", equipo: "local", jugador: "Jon Iturri Bengoechea" },
+    { minuto: 64, tipo: "gol", equipo: "local", jugador: "Oroitz Villena Arandia" },
+    { minuto: 81, tipo: "gol", equipo: "local", jugador: "Ekhi Iriondo Leturia" },
+  ],
+  "15-6": [
+    { minuto: 4, tipo: "gol", equipo: "visitante", jugador: "Argoitz Vazquez" },
+    { minuto: 19, tipo: "gol", equipo: "local", jugador: "I. Gonzalez" },
+    { minuto: 48, tipo: "gol", equipo: "local", jugador: "Christian Serrano" },
+  ],
+};
+
 function datosDemo() {
   const partidos = [];
   CALENDARIO_DHJ_G2.forEach((j) => {
     j.enc.forEach(([localIdx, visIdx]) => {
       const clavePartido = `${localIdx}-${visIdx}`;
-      const resultado = RESULTADOS_J1[clavePartido];
+      const resultado = j.jornada === 1 ? RESULTADOS_J1[clavePartido] : j.jornada === 2 ? RESULTADOS_J2[clavePartido] : null;
       const horarioReal = j.jornada === 2 ? HORARIOS_J2[clavePartido] : j.jornada === 3 ? HORARIOS_J3[clavePartido] : null;
-      const eventosReales = EVENTOS_J1[clavePartido];
+      const eventosReales = j.jornada === 1 ? EVENTOS_J1[clavePartido] : j.jornada === 2 ? EVENTOS_J2[clavePartido] : null;
       const eventos = eventosReales
         ? eventosReales.map((ev) => ({
             id: uid(),
@@ -363,7 +419,7 @@ const ESTILOS = `
   font-size: 12px; font-weight: 700; color: var(--ink); white-space: nowrap;
   border: 1.5px solid var(--ink); border-radius: 4px; padding: 6px 10px; background: var(--paper-dark);
 }
-.liga-barra-admin { background: var(--gold); padding: 8px 16px; display: flex; justify-content: center; }
+.liga-barra-admin { background: var(--gold); padding: 8px 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
 .liga-fila-editable { border-bottom: 1px dashed var(--line); }
 .liga-fila-editable:last-child { border-bottom: none; }
 .liga-fila-editable .liga-fila-compacta { border-bottom: none; }
@@ -629,20 +685,23 @@ export default function App() {
   const buscarPartido = (nuevo, id) => nuevo.partidos.find((x) => x.id === id);
 
   // ---- Mutaciones ----
-  const añadirEquipo = (nombre) => {
+  // Todas leen el dato tal cual está guardado justo antes de escribir (no el que ya
+  // tuviéramos en memoria, que puede llevar hasta 15s desfasado). Así, si dos personas
+  // guardan casi a la vez, no se pisan los cambios de la otra.
+  const añadirEquipo = async (nombre) => {
     if (!nombre.trim()) return;
-    const nuevo = clonar(datos);
+    const nuevo = await leerDatosFrescos();
     nuevo.equipos.push({ id: uid(), nombre: nombre.trim() });
     guardar(nuevo);
   };
-  const eliminarEquipo = (id) => {
-    const nuevo = clonar(datos);
+  const eliminarEquipo = async (id) => {
+    const nuevo = await leerDatosFrescos();
     nuevo.equipos = nuevo.equipos.filter((e) => e.id !== id);
     guardar(nuevo);
   };
-  const añadirPartido = (form) => {
+  const añadirPartido = async (form) => {
     if (!form.localId || !form.visitanteId || form.localId === form.visitanteId) return;
-    const nuevo = clonar(datos);
+    const nuevo = await leerDatosFrescos();
     nuevo.partidos.push({
       id: uid(),
       jornada: Number(form.jornada) || 1,
@@ -658,15 +717,15 @@ export default function App() {
     });
     guardar(nuevo);
   };
-  const eliminarPartido = (id) => {
-    const nuevo = clonar(datos);
+  const eliminarPartido = async (id) => {
+    const nuevo = await leerDatosFrescos();
     nuevo.partidos = nuevo.partidos.filter((p) => p.id !== id);
     guardar(nuevo);
   };
 
   // Un solo botón "marcha/paro" que recorre: iniciar partido -> descanso -> iniciar 2ª parte (desde el min. 45) -> descanso/reanudar normal
-  const alternarCronometro = (id) => {
-    const nuevo = clonar(datos);
+  const alternarCronometro = async (id) => {
+    const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, id);
     if (!p) return;
     if (p.estado === "programado") {
@@ -692,8 +751,8 @@ export default function App() {
     }
     guardar(nuevo);
   };
-  const finalizarPartido = (id) => {
-    const nuevo = clonar(datos);
+  const finalizarPartido = async (id) => {
+    const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, id);
     if (!p) return;
     if (p.cronometro && p.cronometro.corriendo && p.cronometro.inicio) {
@@ -714,29 +773,29 @@ export default function App() {
       else if (ev.equipoId === p.visitanteId) p.golesVisitante = (p.golesVisitante || 0) + 1;
     }
   };
-  const registrarGol = (partidoId, equipoId) => {
-    const nuevo = clonar(datos);
+  const registrarGol = async (partidoId, equipoId) => {
+    const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
     añadirEventoInterno(nuevo, partidoId, { tipo: "gol", equipoId, minuto: minutosDe(p) });
     guardar(nuevo);
   };
-  const registrarTarjeta = (partidoId, equipoId, color) => {
-    const nuevo = clonar(datos);
+  const registrarTarjeta = async (partidoId, equipoId, color) => {
+    const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
     añadirEventoInterno(nuevo, partidoId, { tipo: color, equipoId, minuto: minutosDe(p) });
     guardar(nuevo);
   };
-  const registrarCambio = (partidoId, equipoId) => {
-    const nuevo = clonar(datos);
+  const registrarCambio = async (partidoId, equipoId) => {
+    const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
     añadirEventoInterno(nuevo, partidoId, { tipo: "cambio", equipoId, minuto: minutosDe(p) });
     guardar(nuevo);
   };
-  const deshacerEvento = (partidoId) => {
-    const nuevo = clonar(datos);
+  const deshacerEvento = async (partidoId) => {
+    const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, partidoId);
     if (!p || !p.eventos || !p.eventos.length) return;
     const ultimo = p.eventos.pop();
@@ -748,27 +807,63 @@ export default function App() {
   };
 
   // --- Corrección manual (solo organizador): permite arreglar cualquier dato si algo salió mal ---
-  const actualizarPartidoManual = (id, cambios) => {
-    const nuevo = clonar(datos);
+  const actualizarPartidoManual = async (id, cambios) => {
+    const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, id);
     if (!p) return;
     Object.assign(p, cambios);
     guardar(nuevo);
   };
-  const eliminarEventoManual = (partidoId, eventoId) => {
-    const nuevo = clonar(datos);
+  const eliminarEventoManual = async (partidoId, eventoId) => {
+    const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
     p.eventos = (p.eventos || []).filter((e) => e.id !== eventoId);
     guardar(nuevo);
   };
-  const añadirEventoManual = (partidoId, evento) => {
-    const nuevo = clonar(datos);
+  const añadirEventoManual = async (partidoId, evento) => {
+    const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
     p.eventos = p.eventos || [];
     p.eventos.push({ ...evento, id: uid() });
     guardar(nuevo);
+  };
+
+  // Aplica de golpe los resultados/goleadores/horarios reales ya conocidos (Sofascore),
+  // sin tocar ningún partido que ya tenga marcador, eventos o estado distinto de "programado"
+  // (para no pisar nada que ya se haya jugado o corregido a mano).
+  const aplicarResultadosConocidos = async () => {
+    const nuevo = await leerDatosFrescos();
+    let aplicados = 0;
+    (nuevo.partidos || []).forEach((p) => {
+      const localIdx = Number((p.localId || "").replace("eq", ""));
+      const visIdx = Number((p.visitanteId || "").replace("eq", ""));
+      const clave = `${localIdx}-${visIdx}`;
+      const horario = p.jornada === 2 ? HORARIOS_J2[clave] : p.jornada === 3 ? HORARIOS_J3[clave] : null;
+      if (horario) {
+        p.fecha = horario.fecha;
+        p.hora = horario.hora;
+      }
+      const yaTocado = p.estado !== "programado" || (p.golesLocal || 0) > 0 || (p.golesVisitante || 0) > 0 || (p.eventos && p.eventos.length > 0);
+      if (yaTocado) return;
+      const resultado = p.jornada === 1 ? RESULTADOS_J1[clave] : p.jornada === 2 ? RESULTADOS_J2[clave] : null;
+      const eventosReales = p.jornada === 1 ? EVENTOS_J1[clave] : p.jornada === 2 ? EVENTOS_J2[clave] : null;
+      if (!resultado) return;
+      p.golesLocal = resultado[0];
+      p.golesVisitante = resultado[1];
+      p.estado = "finalizado";
+      p.eventos = (eventosReales || []).map((ev) => ({
+        id: uid(),
+        minuto: ev.minuto,
+        tipo: ev.tipo,
+        equipoId: ev.equipo === "local" ? p.localId : p.visitanteId,
+        jugador: ev.jugador,
+      }));
+      aplicados += 1;
+    });
+    guardar(nuevo);
+    window.alert(aplicados > 0 ? `Aplicados ${aplicados} partidos con resultados conocidos.` : "No había ningún partido pendiente al que aplicar resultados conocidos.");
   };
 
   const intentarDesbloquear = () => {
@@ -915,6 +1010,14 @@ export default function App() {
           <button className="liga-btn secundario" onClick={() => setPestaña(pestaña === "editor" ? "vivo" : "editor")}>
             {pestaña === "editor" ? <>← Volver a En vivo</> : <><Pencil size={13} /> Editar todo (corregir errores)</>}
           </button>
+          {pestaña === "editor" && (
+            <button
+              className="liga-btn secundario"
+              onClick={() => { if (window.confirm("Esto rellena fecha/hora/marcador/goleadores conocidos en los partidos que aún estén sin tocar. ¿Continuar?")) aplicarResultadosConocidos(); }}
+            >
+              Aplicar resultados conocidos (Sofascore)
+            </button>
+          )}
         </div>
       )}
 
