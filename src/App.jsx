@@ -818,7 +818,12 @@ export default function App() {
     const nuevo = await leerDatosFrescos();
     const p = buscarPartido(nuevo, partidoId);
     if (!p) return;
+    const evento = (p.eventos || []).find((e) => e.id === eventoId);
     p.eventos = (p.eventos || []).filter((e) => e.id !== eventoId);
+    if (evento && evento.tipo === "gol") {
+      if (evento.equipoId === p.localId) p.golesLocal = Math.max(0, (p.golesLocal || 0) - 1);
+      else if (evento.equipoId === p.visitanteId) p.golesVisitante = Math.max(0, (p.golesVisitante || 0) - 1);
+    }
     guardar(nuevo);
   };
   const añadirEventoManual = async (partidoId, evento) => {
@@ -827,6 +832,29 @@ export default function App() {
     if (!p) return;
     p.eventos = p.eventos || [];
     p.eventos.push({ ...evento, id: uid() });
+    if (evento.tipo === "gol") {
+      if (evento.equipoId === p.localId) p.golesLocal = (p.golesLocal || 0) + 1;
+      else if (evento.equipoId === p.visitanteId) p.golesVisitante = (p.golesVisitante || 0) + 1;
+    }
+    guardar(nuevo);
+  };
+  const actualizarEventoManual = async (partidoId, eventoId, cambios) => {
+    const nuevo = await leerDatosFrescos();
+    const p = buscarPartido(nuevo, partidoId);
+    if (!p) return;
+    const evento = (p.eventos || []).find((e) => e.id === eventoId);
+    if (!evento) return;
+    // Deshacemos el aporte al marcador del evento tal como estaba antes de editarlo...
+    if (evento.tipo === "gol") {
+      if (evento.equipoId === p.localId) p.golesLocal = Math.max(0, (p.golesLocal || 0) - 1);
+      else if (evento.equipoId === p.visitanteId) p.golesVisitante = Math.max(0, (p.golesVisitante || 0) - 1);
+    }
+    Object.assign(evento, cambios);
+    // ...y aplicamos el aporte del evento ya actualizado (por si cambió de tipo o de equipo).
+    if (evento.tipo === "gol") {
+      if (evento.equipoId === p.localId) p.golesLocal = (p.golesLocal || 0) + 1;
+      else if (evento.equipoId === p.visitanteId) p.golesVisitante = (p.golesVisitante || 0) + 1;
+    }
     guardar(nuevo);
   };
 
@@ -1075,6 +1103,7 @@ export default function App() {
             actualizarPartidoManual={actualizarPartidoManual}
             eliminarEventoManual={eliminarEventoManual}
             añadirEventoManual={añadirEventoManual}
+            actualizarEventoManual={actualizarEventoManual}
           />
         )}
         {!modoRestringido && pestaña === "clasificacion" && <VistaClasificacion tabla={clasificacion} />}
@@ -1100,6 +1129,7 @@ export default function App() {
               actualizarPartidoManual={actualizarPartidoManual}
               eliminarEventoManual={eliminarEventoManual}
               añadirEventoManual={añadirEventoManual}
+              actualizarEventoManual={actualizarEventoManual}
             />
           </div>
         )}
@@ -1487,7 +1517,7 @@ function MarcadorPartido({
 
 function VistaCalendario({
   partidos, equipos, nombreEquipo, desbloqueado, añadirPartido, eliminarPartido,
-  actualizarPartidoManual, eliminarEventoManual, añadirEventoManual,
+  actualizarPartidoManual, eliminarEventoManual, añadirEventoManual, actualizarEventoManual,
 }) {
   const [jornada, setJornada] = useState("1");
   const [fecha, setFecha] = useState("");
@@ -1563,6 +1593,7 @@ function VistaCalendario({
                     actualizarPartidoManual={actualizarPartidoManual}
                     eliminarEventoManual={eliminarEventoManual}
                     añadirEventoManual={añadirEventoManual}
+                    actualizarEventoManual={actualizarEventoManual}
                   />
                 ))}
               </div>
@@ -1576,7 +1607,7 @@ function VistaCalendario({
 
 function FilaPartidoCalendario({
   p, equipos, nombreEquipo, desbloqueado, eliminarPartido,
-  actualizarPartidoManual, eliminarEventoManual, añadirEventoManual,
+  actualizarPartidoManual, eliminarEventoManual, añadirEventoManual, actualizarEventoManual,
 }) {
   const [editando, setEditando] = useState(false);
   const [estado, setEstado] = useState(p.estado);
@@ -1589,6 +1620,29 @@ function FilaPartidoCalendario({
   const [nuevoEquipo, setNuevoEquipo] = useState(p.localId);
   const [nuevoMinuto, setNuevoMinuto] = useState("");
   const [nuevoJugador, setNuevoJugador] = useState("");
+
+  const [eventoEditandoId, setEventoEditandoId] = useState(null);
+  const [editTipo, setEditTipo] = useState("gol");
+  const [editEquipo, setEditEquipo] = useState(p.localId);
+  const [editMinuto, setEditMinuto] = useState("");
+  const [editJugador, setEditJugador] = useState("");
+
+  const empezarEdicionEvento = (ev) => {
+    setEventoEditandoId(ev.id);
+    setEditTipo(ev.tipo);
+    setEditEquipo(ev.equipoId);
+    setEditMinuto(ev.minuto);
+    setEditJugador(ev.jugador || "");
+  };
+  const guardarEdicionEvento = () => {
+    actualizarEventoManual(p.id, eventoEditandoId, {
+      tipo: editTipo,
+      equipoId: editEquipo,
+      minuto: Number(editMinuto) || 0,
+      jugador: editJugador.trim(),
+    });
+    setEventoEditandoId(null);
+  };
 
   const abrir = () => {
     setEstado(p.estado);
@@ -1663,15 +1717,43 @@ function FilaPartidoCalendario({
 
           <p className="liga-form-titulo" style={{ marginTop: 18 }}>Goles y tarjetas registrados</p>
           {(p.eventos || []).length === 0 && <p className="liga-vacio" style={{ padding: "6px 0" }}>Sin eventos.</p>}
-          {(p.eventos || []).map((ev) => (
-            <div key={ev.id} className="liga-solicitud-fila">
-              <span style={{ fontSize: 13 }}>
-                {ev.minuto}' · {ev.tipo === "gol" ? "⚽" : ev.tipo === "amarilla" ? "🟨" : ev.tipo === "roja" ? "🟥" : "🔄"}{" "}
-                {ev.jugador ? `${ev.jugador} · ` : ""}{nombreEquipo(ev.equipoId)}
-              </span>
-              <button className="liga-x-btn" onClick={() => eliminarEventoManual(p.id, ev.id)}><Trash2 size={14} /></button>
-            </div>
-          ))}
+          {(p.eventos || []).map((ev) =>
+            eventoEditandoId === ev.id ? (
+              <div key={ev.id} className="liga-form" style={{ background: "#fff", marginBottom: 8 }}>
+                <div className="liga-grid2" style={{ marginBottom: 8 }}>
+                  <select className="liga-input" value={editTipo} onChange={(e) => setEditTipo(e.target.value)}>
+                    <option value="gol">⚽ Gol</option>
+                    <option value="amarilla">🟨 Amarilla</option>
+                    <option value="roja">🟥 Roja</option>
+                    <option value="cambio">🔄 Cambio</option>
+                  </select>
+                  <select className="liga-input" value={editEquipo} onChange={(e) => setEditEquipo(e.target.value)}>
+                    <option value={p.localId}>{nombreEquipo(p.localId)}</option>
+                    <option value={p.visitanteId}>{nombreEquipo(p.visitanteId)}</option>
+                  </select>
+                </div>
+                <div className="liga-grid2" style={{ marginBottom: 8 }}>
+                  <input className="liga-input" type="number" placeholder="Minuto" value={editMinuto} onChange={(e) => setEditMinuto(e.target.value)} />
+                  <input className="liga-input" type="text" placeholder="Jugador" value={editJugador} onChange={(e) => setEditJugador(e.target.value)} />
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  <button className="liga-btn" onClick={guardarEdicionEvento}>Guardar</button>
+                  <button className="liga-btn secundario" onClick={() => setEventoEditandoId(null)}>Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <div key={ev.id} className="liga-solicitud-fila">
+                <span style={{ fontSize: 13 }}>
+                  {ev.minuto}' · {ev.tipo === "gol" ? "⚽" : ev.tipo === "amarilla" ? "🟨" : ev.tipo === "roja" ? "🟥" : "🔄"}{" "}
+                  {ev.jugador ? `${ev.jugador} · ` : ""}{nombreEquipo(ev.equipoId)}
+                </span>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <button className="liga-x-btn" title="Editar" onClick={() => empezarEdicionEvento(ev)}><Pencil size={14} /></button>
+                  <button className="liga-x-btn" onClick={() => eliminarEventoManual(p.id, ev.id)}><Trash2 size={14} /></button>
+                </div>
+              </div>
+            )
+          )}
 
           <p className="liga-form-titulo" style={{ marginTop: 12 }}>Añadir evento</p>
           <div className="liga-grid2" style={{ marginBottom: 8 }}>
