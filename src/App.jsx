@@ -1131,6 +1131,8 @@ export default function App() {
               añadirEventoManual={añadirEventoManual}
               actualizarEventoManual={actualizarEventoManual}
             />
+            <VistaGoleadores tabla={goleadores} />
+            <VistaClasificacion tabla={clasificacion} />
           </div>
         )}
       </div>
