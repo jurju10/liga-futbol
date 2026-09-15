@@ -845,25 +845,34 @@ export default function App() {
         p.fecha = horario.fecha;
         p.hora = horario.hora;
       }
-      const yaTocado = p.estado !== "programado" || (p.golesLocal || 0) > 0 || (p.golesVisitante || 0) > 0 || (p.eventos && p.eventos.length > 0);
-      if (yaTocado) return;
       const resultado = p.jornada === 1 ? RESULTADOS_J1[clave] : p.jornada === 2 ? RESULTADOS_J2[clave] : null;
       const eventosReales = p.jornada === 1 ? EVENTOS_J1[clave] : p.jornada === 2 ? EVENTOS_J2[clave] : null;
       if (!resultado) return;
-      p.golesLocal = resultado[0];
-      p.golesVisitante = resultado[1];
-      p.estado = "finalizado";
-      p.eventos = (eventosReales || []).map((ev) => ({
-        id: uid(),
-        minuto: ev.minuto,
-        tipo: ev.tipo,
-        equipoId: ev.equipo === "local" ? p.localId : p.visitanteId,
-        jugador: ev.jugador,
-      }));
-      aplicados += 1;
+
+      let tocado = false;
+      // Marcador y estado: solo si el partido sigue tal cual, sin nada metido a mano todavía.
+      if (p.estado === "programado" && (p.golesLocal || 0) === 0 && (p.golesVisitante || 0) === 0) {
+        p.golesLocal = resultado[0];
+        p.golesVisitante = resultado[1];
+        p.estado = "finalizado";
+        tocado = true;
+      }
+      // Goleadores: independiente de lo anterior. Si ya se metió el marcador a mano pero
+      // sin los goles uno a uno, esto los rellena igualmente.
+      if ((!p.eventos || p.eventos.length === 0) && eventosReales) {
+        p.eventos = eventosReales.map((ev) => ({
+          id: uid(),
+          minuto: ev.minuto,
+          tipo: ev.tipo,
+          equipoId: ev.equipo === "local" ? p.localId : p.visitanteId,
+          jugador: ev.jugador,
+        }));
+        tocado = true;
+      }
+      if (tocado) aplicados += 1;
     });
     guardar(nuevo);
-    window.alert(aplicados > 0 ? `Aplicados ${aplicados} partidos con resultados conocidos.` : "No había ningún partido pendiente al que aplicar resultados conocidos.");
+    window.alert(aplicados > 0 ? `Aplicados ${aplicados} partidos con datos conocidos.` : "No había ningún partido pendiente al que aplicar datos conocidos.");
   };
 
   const intentarDesbloquear = () => {
